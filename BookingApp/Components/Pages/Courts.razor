@@ -1,0 +1,106 @@
+@page "/courts"
+@rendermode InteractiveServer
+@using System.Security.Claims
+@using BookingApp.Data
+@using BookingApp.Services
+@inject BookingService BookingService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<PageTitle>Book a Court</PageTitle>
+
+<h1>Book a Court</h1>
+
+@if (courts is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label class="form-label">Court</label>
+            <select class="form-select" @bind="selectedCourtId" @bind:after="LoadSlotsAsync">
+                @foreach (var c in courts)
+                {
+                    <option value="@c.Id">@c.Name ($@c.PricePerHour / hour)</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-control"
+                   min="@DateTime.Today.ToString("yyyy-MM-dd")"
+                   @bind="selectedDate" @bind:after="LoadSlotsAsync" />
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <div class="alert @(isError ? "alert-danger" : "alert-success")">@message</div>
+    }
+
+    @if (slots is null)
+    {
+        <p><em>Loading time slots...</em></p>
+    }
+    else if (slots.Count == 0)
+    {
+        <p>No available time slots for this day.</p>
+    }
+    else
+    {
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var s in slots)
+            {
+                <button class="btn btn-outline-primary" @onclick="() => BookAsync(s.Id)">
+                    @s.StartTime.ToString("HH:mm") - @s.EndTime.ToString("HH:mm")
+                </button>
+            }
+        </div>
+    }
+}
+
+@code {
+    private List<Court>? courts;
+    private List<TimeSlot>? slots;
+    private int selectedCourtId;
+    private DateTime selectedDate = DateTime.Today;
+    private string? message;
+    private bool isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        courts = await BookingService.GetCourtsAsync();
+        if (courts.Count > 0)
+        {
+            selectedCourtId = courts[0].Id;
+            await LoadSlotsAsync();
+        }
+    }
+
+    private async Task LoadSlotsAsync()
+    {
+        slots = null;
+        slots = await BookingService.GetAvailableSlotsAsync(selectedCourtId, selectedDate);
+    }
+
+    private async Task BookAsync(int slotId)
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (userId is null)
+        {
+            // کاربر لاگین نیست: بره صفحه‌ی ورود و بعد از ورود برگرده همین‌جا
+            Nav.NavigateTo($"Account/Login?returnUrl={Uri.EscapeDataString("/courts")}");
+            return;
+        }
+
+        var result = await BookingService.BookAsync(userId, slotId);
+        isError = !result.Success;
+        message = result.Success ? "Your booking is confirmed!" : result.Error;
+
+        await LoadSlotsAsync();
+    }
+}
