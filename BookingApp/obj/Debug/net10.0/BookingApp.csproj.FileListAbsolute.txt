@@ -204,3 +204,4 @@ D:\BookingApp\BookingApp\obj\Debug\net10.0\refint\BookingApp.dll
 D:\BookingApp\BookingApp\obj\Debug\net10.0\BookingApp.pdb
 D:\BookingApp\BookingApp\obj\Debug\net10.0\BookingApp.genruntimeconfig.cache
 D:\BookingApp\BookingApp\obj\Debug\net10.0\ref\BookingApp.dll
+D:\BookingApp\BookingApp\obj\Debug\net10.0\BookingApp.sourcelink.json
